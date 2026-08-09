@@ -1,0 +1,24 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache & Databases
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+backend/movies.db
+backend/data/*.csv
+
+# Node Modules & Build Outputs
+node_modules/
+dist/
+build/
+.DS_Store
+
+# IDE / Logs
+.vscode/
+.idea/
+*.log
