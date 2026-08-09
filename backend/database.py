@@ -3,17 +3,18 @@ import os
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "movies.db"))
 
-def get_db_connection():
+def get_db_connection(readonly=False):
     if not os.path.exists(DB_PATH):
-        # Fallback if DB file missing
         conn = sqlite3.connect(":memory:", check_same_thread=False)
         conn.row_factory = sqlite3.Row
         return conn
 
-    try:
-        # Try URI read-only mode for serverless read-only filesystems (Vercel)
-        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, check_same_thread=False)
-    except Exception:
+    if readonly:
+        try:
+            conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, check_same_thread=False)
+        except Exception:
+            conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    else:
         conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         
     conn.row_factory = sqlite3.Row
@@ -22,7 +23,7 @@ def get_db_connection():
 def init_db():
     if not os.path.exists(DB_PATH):
         print("Creating fallback in-memory SQLite schema...")
-        conn = get_db_connection()
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         cursor = conn.cursor()
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS movies (
