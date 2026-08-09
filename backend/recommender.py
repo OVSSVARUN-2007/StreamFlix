@@ -17,69 +17,73 @@ class RecommendationEngine:
         self.is_ready = False
 
     def load_and_fit(self):
-        print("Loading movies from database and training TF-IDF recommendation model...")
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT id, title, overview, genres_str, keywords_str, director, top_cast, 
-                   vote_average, vote_count, weighted_rating, popularity, poster_url, backdrop_url, release_year, runtime, tagline
-            FROM movies
-        """)
-        
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            print("Warning: No movies found in database!")
+        if self.is_ready:
             return
 
-        documents = []
-        self.movie_ids = []
-        self.id_to_index = {}
-        self.index_to_id = {}
-        self.movies_dict = {}
-
-        for idx, r in enumerate(rows):
-            m_id = r['id']
-            self.movie_ids.append(m_id)
-            self.id_to_index[m_id] = idx
-            self.index_to_id[idx] = m_id
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
             
-            top_cast = json.loads(r['top_cast']) if r['top_cast'] else []
-            cast_str = " ".join([c.replace(" ", "") for c in top_cast])
-            director_str = r['director'].replace(" ", "") if r['director'] else ""
-            genres_clean = r['genres_str'].replace(" ", "").replace(",", " ") if r['genres_str'] else ""
-            keywords_clean = r['keywords_str'].replace(",", " ") if r['keywords_str'] else ""
-            overview = r['overview'] if r['overview'] else ""
+            cursor.execute("""
+                SELECT id, title, overview, genres_str, keywords_str, director, top_cast, 
+                       vote_average, vote_count, weighted_rating, popularity, poster_url, backdrop_url, release_year, runtime, tagline
+                FROM movies
+            """)
+            
+            rows = cursor.fetchall()
+            conn.close()
 
-            soup = f"{genres_clean} {cast_str} {director_str} {keywords_clean} {overview}"
-            documents.append(soup)
+            if not rows:
+                print("Warning: No movies found in database!")
+                return
 
-            self.movies_dict[m_id] = {
-                "id": m_id,
-                "title": r['title'],
-                "overview": r['overview'],
-                "genres": r['genres_str'].split(", ") if r['genres_str'] else [],
-                "keywords": r['keywords_str'].split(", ") if r['keywords_str'] else [],
-                "director": r['director'],
-                "top_cast": top_cast,
-                "vote_average": r['vote_average'],
-                "vote_count": r['vote_count'],
-                "weighted_rating": r['weighted_rating'],
-                "popularity": r['popularity'],
-                "poster_url": r['poster_url'],
-                "backdrop_url": r['backdrop_url'],
-                "release_year": r['release_year'],
-                "runtime": r['runtime'],
-                "tagline": r['tagline']
-            }
+            documents = []
+            self.movie_ids = []
+            self.id_to_index = {}
+            self.index_to_id = {}
+            self.movies_dict = {}
 
-        tfidf = TfidfVectorizer(stop_words='english', max_features=10000)
-        self.tfidf_matrix = tfidf.fit_transform(documents)
-        self.cosine_sim = cosine_similarity(self.tfidf_matrix, self.tfidf_matrix)
-        self.is_ready = True
-        print(f"Recommendation Engine trained successfully on {len(self.movie_ids)} movies!")
+            for idx, r in enumerate(rows):
+                m_id = r['id']
+                self.movie_ids.append(m_id)
+                self.id_to_index[m_id] = idx
+                self.index_to_id[idx] = m_id
+                
+                top_cast = json.loads(r['top_cast']) if r['top_cast'] else []
+                cast_str = " ".join([c.replace(" ", "") for c in top_cast])
+                director_str = r['director'].replace(" ", "") if r['director'] else ""
+                genres_clean = r['genres_str'].replace(" ", "").replace(",", " ") if r['genres_str'] else ""
+                keywords_clean = r['keywords_str'].replace(",", " ") if r['keywords_str'] else ""
+                overview = r['overview'] if r['overview'] else ""
+
+                soup = f"{genres_clean} {cast_str} {director_str} {keywords_clean} {overview}"
+                documents.append(soup)
+
+                self.movies_dict[m_id] = {
+                    "id": m_id,
+                    "title": r['title'],
+                    "overview": r['overview'],
+                    "genres": r['genres_str'].split(", ") if r['genres_str'] else [],
+                    "keywords": r['keywords_str'].split(", ") if r['keywords_str'] else [],
+                    "director": r['director'],
+                    "top_cast": top_cast,
+                    "vote_average": r['vote_average'],
+                    "vote_count": r['vote_count'],
+                    "weighted_rating": r['weighted_rating'],
+                    "popularity": r['popularity'],
+                    "poster_url": r['poster_url'],
+                    "backdrop_url": r['backdrop_url'],
+                    "release_year": r['release_year'],
+                    "runtime": r['runtime'],
+                    "tagline": r['tagline']
+                }
+
+            tfidf = TfidfVectorizer(stop_words='english', max_features=5000)
+            self.tfidf_matrix = tfidf.fit_transform(documents)
+            self.cosine_sim = cosine_similarity(self.tfidf_matrix, self.tfidf_matrix)
+            self.is_ready = True
+        except Exception as e:
+            print("Error training recommendation model:", e)
 
     def generate_explanation(self, source_movie: dict, rec_movie: dict) -> str:
         reasons = []

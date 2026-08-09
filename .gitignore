@@ -3,13 +3,13 @@ venv/
 .venv/
 env/
 
-# Python Cache & Databases
+# Python Cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.db
-backend/movies.db
+
+# Raw Dataset CSV Files (optional)
 backend/data/*.csv
 
 # Node Modules & Build Outputs
